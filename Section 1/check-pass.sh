@@ -1,6 +1,6 @@
 #!/bin/bash
 # Shebang
-#
+# 1
 #
 # https://api.pwnedpasswords.com/range/5baa6
 #
