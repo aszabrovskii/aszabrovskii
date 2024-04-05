@@ -1,0 +1,148 @@
+---
+
+- name: deploy virtual machines
+
+  hosts: localhost
+  gather_facts: false
+
+  handlers:
+
+  - name: sleep
+    pause:
+      seconds: 10
+
+  tasks:
+
+  - name: include vars
+    include_vars: 'vars.yml'
+
+  - name: create vms
+    proxmox_kvm:
+      api_user: "{{ api_user }}"
+      api_password: "{{ api_password }}"
+      api_host: "{{ api_host }}"
+      node: "{{ item.value.node }}"
+      name: "{{ item.key }}"
+      net: '{{ item.value.net | default(defaults.net) }}'
+      scsihw: '{{ item.value.scsihw | default(defaults.scsihw) }}'
+      virtio: '{{ item.value.virtio | default(defaults.virtio) }}'
+      cores: '{{ item.value.cores | default(defaults.cores) }}'
+      memory: '{{ item.value.memory_size | default(defaults.memory_size) }}'
+      balloon: '{{ item.value.balloon | default(defaults.balloon) }}'
+      vga: 'qxl'
+      ostype: '{{ item.value.ostype | default(defaults.ostype) }}'
+      args: "{{ lookup('template', '{{ deployments[item.value.type].template }}') | replace('\n', '') }}"
+      cpu: '{{ item.value.cpu | default(defaults.cpu) }}'
+      state: present
+    with_dict: "{{ vms }}"
+    loop_control:
+      pause: 5
+    notify:
+      - sleep
+    register: created_vms_pve
+    when: not item.value.cloudinit | default(false) | bool
+
+  - meta: flush_handlers
+    when: created_vms_pve.changed
+
+  - name: fetch deploy kernel
+    get_url:
+      url:  "{{ deployments[item.item.value.type].kernel }}"
+      dest: "/tmp/{{ item.item.value.type }}-{{ deployments[item.item.value.type].kernel | basename }}"
+    delegate_to: "{{ item.item.value.node }}"
+    with_items: "{{ created_vms_pve.results }}"
+    when: item.changed
+    no_log: True
+
+  - name: fetch deploy initrd
+    get_url:
+      url:  "{{ deployments[item.item.value.type].initrd }}"
+      dest: "/tmp/{{ item.item.value.type }}-{{ deployments[item.item.value.type].initrd | basename }}"
+    delegate_to: "{{ item.item.value.node }}"
+    with_items: "{{ created_vms_pve.results }}"
+    when: item.changed
+    no_log: True
+
+  - name: start vm deployment
+    proxmox_kvm:
+      api_user: "{{ api_user }}"
+      api_password: "{{ api_password }}"
+      api_host: "{{ api_host }}"
+      node: "{{ item.item.value.node }}"
+      name: "{{ item.item.key }}"
+      state: started
+    with_items: "{{ created_vms_pve.results }}"
+    notify:
+      - sleep
+    when: item.changed
+    no_log: True
+  
+  - meta: flush_handlers
+    when: created_vms_pve.changed
+  
+  - name: remove deploy args from vm
+    proxmox_kvm:
+      api_user: "{{ api_user }}"
+      api_password: "{{ api_password }}"
+      api_host: "{{ api_host }}"
+      node: "{{ item.item.value.node }}"
+      name: "{{ item.item.key }}"
+      delete: args
+    with_items: "{{ created_vms_pve.results }}"
+    when: item.changed
+    no_log: True
+
+  - name: clone cloud-init from template
+    proxmox_kvm:
+      api_user: "{{ api_user }}"
+      api_password: "{{ api_password }}"
+      api_host: "{{ api_host }}"
+      node: "{{ item.value.node }}"
+      name: "{{ item.key }}"
+      clone: "{{ item.value.template }}"
+      net: '{{ item.value.net | default(defaults.net) }}'
+    with_dict: "{{ vms }}"
+    loop_control:
+      pause: 5
+    notify:
+      - sleep
+    register: cloned_vms_pve
+    when: item.value.cloudinit | default(false) | bool
+
+  - meta: flush_handlers
+    when: cloned_vms_pve.changed
+
+  - name: update cloud-init settings
+    proxmox_kvm:
+      api_user: "{{ api_user }}"
+      api_password: "{{ api_password }}"
+      api_host: "{{ api_host }}"
+      node: "{{ item.item.value.node }}"
+      name: "{{ item.item.key }}"
+      ipconfig: "{{ item.item.value.ipconfig | default(defaults.ipconfig) }}"
+      sshkeys: "{{ item.item.value.sshkeys | default(defaults.sshkeys) | urlencode | replace('/','%2F') }}"
+      cores: '{{ item.item.value.cores | default(defaults.cores) }}'
+      memory: '{{ item.item.value.memory_size | default(defaults.memory_size) }}'
+      balloon: '{{ item.item.value.balloon | default(defaults.balloon) }}'
+      vga: 'serial0'
+      serial: '{"serial0":"socket"}'
+      ostype: '{{ item.item.value.ostype | default(defaults.ostype) }}'
+      cpu: '{{ item.item.value.cpu | default(defaults.cpu) }}'
+      bootdisk: "scsi0"
+      boot: "c"
+      update: yes
+    with_items: "{{ cloned_vms_pve.results }}"
+    when: item.changed
+    no_log: True
+
+  - name: start clones
+    proxmox_kvm:
+      api_user: "{{ api_user }}"
+      api_password: "{{ api_password }}"
+      api_host: "{{ api_host }}"
+      node: "{{ item.item.value.node }}"
+      name: "{{ item.item.key }}"
+      state: started
+    with_items: "{{ cloned_vms_pve.results }}"
+    when: item.changed
+    no_log: True

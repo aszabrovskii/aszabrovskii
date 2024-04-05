@@ -1,0 +1,81 @@
+---
+# proxmox_kvm options
+api_user: 'root@pam'
+# better use encrypted vault like
+# api_password: !vault |
+#          $ANSIBLE_VAULT;1.1;AES256
+#          66386439653236336462626566653063336164663966303231363934653561363964363833313662
+#          6431626536303530376336343832656537303632313433360a626438346336353331386135323734
+#          62656361653630373231613662633962316233633936396165386439616533353965373339616234
+#          3430613539666330390a313736323265656432366236633330313963326365653937323833366536
+#          34623731376664623134383463316265643436343438623266623965636363326136
+api_password: 'password'
+api_host: 'frink'
+defaults:
+  cpu: "host"
+  net: '{"net0":"virtio,bridge=vmbr0"}'
+  cores: '2'
+  memory_size: '2048'
+  balloon: '1024'
+  scsihw: 'virtio-scsi-pci'
+  virtio: '{"scsi0":"local-zfs:16,cache=writeback,discard=on"}'
+  ostype: 'l26'
+  sshkeys: 'ssh-rsa  AAAAB...ZZZZ'
+
+# default deployment values
+deployments:
+  ubuntu:
+    kernel: 'http://download.morph027.de/ubuntu-installer/linux'
+    initrd: 'http://download.morph027.de/ubuntu-installer/initrd.gz'
+    template: 'deploy-args-ubuntu.j2'
+    preseed: 'https://gitlab.com/morph027/pve-infra-poc/raw/master/contrib/preseed/server.seed'
+  centos:
+    kernel: 'http://ftp.hosteurope.de/mirror/centos.org/7/os/x86_64/isolinux/vmlinuz'
+    initrd: 'http://ftp.hosteurope.de/mirror/centos.org/7/os/x86_64/isolinux/initrd.img'
+    template: 'deploy-args-centos.j2'
+    stage2: 'http://ftp.hosteurope.de/mirror/centos.org/7/os/x86_64/'
+    repo: 'http://ftp.hosteurope.de/mirror/centos.org/7/os/x86_64/'
+    ks: 'https://gitlab.com/morph027/pve-infra-poc/raw/master/contrib/kickstart/server.ks'
+
+# vm definitions
+vms:
+  ubuntu-dhcp:
+    node: 'frink'
+    type: 'ubuntu'
+  ubuntu-static:
+    node: 'frink'
+    type: 'ubuntu'
+    network:
+      ip: '192.168.158.23'
+      netmask: '255.255.255.0'
+      gateway: '192.168.158.200'
+      nameserver: '192.168.158.200'
+      domainname: 'lan'
+  centos-dhcp:
+    node: 'frink'
+    type: 'centos'
+    # overide memory_size and cores from default values
+    memory_size: '4096'
+    cores: '4'
+  centos-static:
+    node: 'frink'
+    type: 'centos'
+    network:
+      ip: '192.168.158.42'
+      netmask: '255.255.255.0'
+      gateway: '192.168.158.200'
+      nameserver: '192.168.158.200'
+    # override stage2, repo and ks for this machine only
+    stage2: 'http://centos-cache.example.com/centos/7/os/x86_64'
+    repo: 'http://centos-cache.example.com/centos/7/os/x86_64'
+    ks: 'https://gitlab.example.com/kickstart/centos/raw/minimal-7.2.1511/centos.cfg'
+  ubuntu-cloud-init-1:
+    cloudinit: true
+    template: 'cloudinit-template-ubuntu'
+    node: 'frink'
+    ipconfig: '{"ipconfig0":"ip=10.0.200.115/16,gw=10.0.0.1"}'
+  ubuntu-cloud-init-2:
+    cloudinit: true
+    template: 'cloudinit-template-ubuntu-16G'
+    node: 'frink'
+    ipconfig: '{"ipconfig0":"ip=dhcp"}'

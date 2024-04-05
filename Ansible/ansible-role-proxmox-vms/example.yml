@@ -1,0 +1,42 @@
+- hosts: <host_name> # see hosts file
+  remote_user: root
+
+  roles:
+    - role: inoxio.proxmox_vms
+      proxmox:
+        api_user: <encrypted user> (@PAM in case you use Linux PAM)
+        api_password: <encrypted password>
+        api_host: <encrypted host>
+      vms:
+        <vm1_name>:
+          node: <node_name>
+          ubuntu_distribution: <distribution_name>
+          locale: en_US
+          root_password:  <encrypted root password>
+          memory_size: <ram_size_in_MB>
+          virtio: '{"virtio0":"local-lvm:<disk_size_in_GB>,cache=writeback,discard=on"}'
+          network:
+            ip: <ip>
+            netmask: <netmask>
+            gateway: <gateway_ip>
+            nameserver: <nameserver1> <nameserver2>
+            domainname: <domainname>
+          additional_packages:
+             - curl
+             - gnupg
+          scripts:
+            - files/scripts/my_script.sh
+
+        <vm2_name>:
+          node: <node_name>
+          root_password: <encrypted root password>
+          ubuntu_distribution: 'xenial'
+          memory_size: <ram_size_in_MB>
+          virtio: '{"virtio0":"local-lvm:<disk_size_in_GB>,cache=writeback,discard=on"}'
+          network:
+            ip: <ip>
+            netmask: <netmask>
+            gateway: <gateway_ip>
+            nameserver: <nameserver1> <nameserver2>
+            domainname: <domainname>
+

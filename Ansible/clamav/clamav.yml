@@ -1,0 +1,20 @@
+---
+
+- name: clamav package
+  package:
+    name:
+    - clamav
+    - clamav-daemon
+  tags: clamav
+- name: blockinfile for clamav
+  blockinfile:
+    path: /etc/clamav/clamd.conf
+    create: yes
+    marker: "# {mark} ANSIBLE MANAGED BLOCK FOR {{sftp_directory}}"
+    insertafter: EOF
+    block: |
+      OnAccessIncludePath {{sftp_directory}}
+      OnAccessPrevention yes
+      OnAccessExtraScanning yes
+  notify: restart clamav
+  tags: clamav

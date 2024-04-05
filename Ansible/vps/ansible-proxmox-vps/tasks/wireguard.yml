@@ -1,0 +1,67 @@
+---
+- name: wireguard - install packages
+  package:
+    state: present
+    name:
+      - iptables-persistent
+
+- name: wireguard - create directories
+  file:
+    path: "{{ wg_server_path }}"
+    state: directory
+    mode: 0700
+
+- name: wireguard - copy wg0 configuration
+  template:
+    src: wg0.conf.j2
+    dest: "{{ wg_server_path }}/wg0.conf"
+    mode: 0600
+  no_log: true
+  notify: restart wireguard
+
+- name: wireguard - configure iptables - forwarding
+  iptables:
+    chain: FORWARD
+    in_interface: wg0
+    jump: ACCEPT
+    action: insert
+    comment: "forwarding for wg0"
+  notify: save iptables
+
+- name: wireguard - configure iptables - masquerade
+  iptables:
+    table: nat
+    chain: POSTROUTING
+    out_interface: eth0
+    jump: MASQUERADE
+    action: insert
+    comment: "masquerade for eth0"
+  notify: save iptables
+
+- name: wireguard - configure iptables - forward ports
+  iptables:
+    table: nat
+    chain: PREROUTING
+    destination: "{{ item.dest }}"
+    protocol: "{{ item.proto }}"
+    destination_port: "{{ item.port }}"
+    to_destination: "{{ item.to_dest }}"
+    jump: DNAT
+    action: insert
+    comment: "{{ item.comment }}"
+  notify: save iptables
+  loop: "{{ iptables_forward_ports }}"
+
+- name: wireguard - configure iptables - hairpin NAT
+  iptables:
+    table: nat
+    chain: POSTROUTING
+    source: "{{ wg_network }}"
+    destination: "{{ item.to_dest }}"
+    protocol: "{{ item.proto }}"
+    destination_port: "{{ item.port }}"
+    jump: MASQUERADE
+    action: insert
+    comment: "{{ item.comment }}"
+  notify: save iptables
+  loop: "{{ iptables_forward_ports }}"

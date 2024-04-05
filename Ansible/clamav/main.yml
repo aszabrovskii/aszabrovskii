@@ -1,0 +1,47 @@
+---
+
+
+- name: sftp user
+  user:
+    name: '{{sftp_user}}'
+    shell: /usr/sbin/nologin
+    createhome: yes
+    home: '{{sftp_user_home}}'
+    system: no
+    password: '{{sftp_user_password|default ("*")}}'
+- name: ssh keys
+  authorized_key:
+    user: '{{sftp_user}}'
+    state: present
+    key: "{{sftp_user_keys}}"
+  when: sftp_user_keys is defined
+- name: template conf.d file
+  template:
+    src: sshd_config_user_d.j2
+    dest: "/etc/ssh/sshd_config.d/{{sftp_user}}"
+  notify: restart sshd
+
+- name: clamav
+  import_tasks: clamav.yml
+  when: sftp_clamav == True
+
+- name: backup
+  import_role:
+    name: borg_client
+  vars:
+    service_name: 'sftp'
+    backup_path: '{{sftp_directory}}'
+  tags: backup
+  when: sftp_backup == True
+
+- name: prometheus role file
+  lineinfile:
+    path: /var/lib/prometheus/node-exporter/role.prom
+    line: 'role{name="sftp",type="sftp server"} 1'
+    regex: '^role{name="sftp".*'
+    create: yes
+    owner: root
+    group: root
+    mode: 0644
+  tags: prom_textfile
+

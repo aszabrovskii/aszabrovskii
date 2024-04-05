@@ -1,0 +1,20 @@
+---
+python_interpreter_test_default:
+  hosts:
+    debian10_python_default:
+      ansible_host: 192.168.50.221
+python_interpreter_test_defined:
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+  hosts:
+    debian10_python_group_defined:
+      ansible_host: 192.168.50.221
+    debian10_python_defined:
+      ansible_host: 192.168.50.221
+      ansible_python_interpreter: /usr/bin/python2
+    debian10_python_auto:
+      ansible_host: 192.168.50.221
+      ansible_python_interpreter: auto
+    debian10_python_auto_legacy:
+      ansible_host: 192.168.50.221
+      ansible_python_interpreter: auto_legacy
