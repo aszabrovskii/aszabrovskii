@@ -1,0 +1,158 @@
+
+                                 List of Nmap commands to check the most common threats according to OWASP
+
+                                                          OWASP  NMAP
+    A01 Injections                                          Yes  Yes      Injections
+    A02 Broken Authentication                               Yes  Yes      Broken Authentication
+    A03 Sensitive Data Exposure                             Yes  Yes      Disclosure of Critical Data
+    A04 XML External Entities (XXE)                         Yes  Yes      XML External Entities (XXE)
+    A05 Broken Access Control                               Yes  Yes      Broken Access Control
+    A06 Security misconfigurations                          Yes  Yes      Incorrect security configuration
+    A07 Cross Site Scripting (XSS)                          Yes  Yes      Cross Site Scripting (XSS)
+    A08 Insecure Deserialization                            Yes  Yes      Insecure Deserialization
+    A09 Using Components with known vulnerabilities         Yes  Yes      Using Components with known vulnerabilities
+    A10 Insufficient logging and monitoring                 Yes  No       Insufficiently detailed logging and weak monitoring
+
+
+
+                                                     #--- Injections ---#
+
+A01 Nmap (-sV or -p80) --script=http-sql-injection <host>                 SQL injection detection script
+    nmap -p80 --script http-sql-injection
+    nmap -p 443 --script ssl-ccs-injection <host>                         ssl-ccs-injection
+
+    nmap --script http-vuln-cve2014-3704 --script-args                    slaxml,http-,smbauth,vulns
+    http-vuln-cve2014-3704.cmd="uname -a",
+    http-vuln-cve2014-3704.uri="/drupal"<host>
+
+    nmap --script http-vuln-cve2014-3704 --script-args                    slaxml,http-,smbauth,vulns
+    http-vuln-cve2014-3704.uri="/drupal",
+    http-vuln-cve2014-3704.cleanup=false <host>
+
+    nmap --script http-vuln-cve2017-8917 -p 80 <host>                     slaxml,http-,smbauth,vulns
+
+    nmap --script http-vuln-cve2017-8917 —script-args
+    http-vuln-cve2017-8917.uri=joomla/ -p 80 <host>                       slaxml,http-,smbauth,vulns
+
+    nmap -p3306 --script mysql-databases --script-args
+    mysqluser=user,mysqlpass=password <host>
+
+                                                 #--- Broken authentication ---#
+
+A02 nmap --script http-auth [--script-args http-auth.path=/login] -p80 <host>        http-auth
+    nmap --script http-form-brute -p 80 <host>                                       http-form-brute
+
+    nmap --script=smb-<script>.nse --script-args=smbuser=ron,
+    smbpass=iagotest2k3,smbbasic=1,smbsign=force <host>                              smb, cifs
+
+    nmap -sV --script ssl-enum-ciphers -p 443 <host>                                 ssl-enum-ciphers
+    nmap -sV ( -sC or –script=ssl-cert.nse) <host>                                   ssl-cert
+    nmap --script snmp-sysdescr --script-args snmpcommunity=admin <host>             snmp
+    nmap -p80 -script http-brute --script-args http-brute.path=/admin/ <host>        admin
+
+    nmap -p80 -script http-brute --script-args userdb=/var/usernames.txt,
+    passdb=/var/passwords.txt <host>                                                 brute
+
+    nmap -p80 --script http-csrf.nse <host>                                          Detects cross-site request
+                                                                                     forgery (CSRF) vulnerabilities
+
+    nmap -p3306 --script mysql-vuln-cve2012-2122 <host>                              Trying to bypass authentication
+    nmap -sV --script mysql-vuln-cve2012-2122 <host>                                 on MySQL and MariaDB servers using
+                                                                                     CVE2012-2122
+    ncrack scanme.nmap.org:22 ftp://<host> ssh://<host>*:5910
+    ncrack scanme.nmap.org 10.0.0.120-122 192.168.2.0/24 -p 22,ftp:3210,telnet
+    ncrack scanme.nmap.org:22,cl=10,at=1 10.0.0.120 10.0.0.20 -p 21 -m ftp:CL=1 -g CL=3
+
+    nmap host --script ssh-hostkey --script-args ssh_hostkey=full                    checks for duplicate hosts using
+    nmap host --script ssh-hostkey --script-args ssh_hostkey=all                     collected keys
+    nmap host --script ssh-hostkey --script-args ssh_hostkey='visual bubble'
+
+
+                                              #--- Disclosure of critical data ---#
+
+A03 nmap -n -Pn -p 80 --open -sV -v --script http-method-tamper scanme.nmap.org      HTTP
+    nmap -vvv --script=banner scanme.nmap.org                                        banner grader
+    nmap -sC scanme.nmap.org -v                                                      Allow you to identify hosts if
+                                                                                     they change their IP address
+    nmap scanme.nmap.org --script default,safe -v -O -sV
+
+                                              #--- XML External Objects (XXE) ---#
+
+A04 nmap --script=http-vuln-cve2009-3960 --script-args
+    http-http-vuln-cve2009-3960.root="/root/" <host>                                 target file to read.
+                                                                                     Default "/etc/passwd"
+    nmap -A <target>
+
+                                                #--- Violated access control ---#
+
+A05 nmap -p80 --script http-waf-detect <host>                                        WAF
+    nmap -p80 --script http-sql-injection<host>                                      SQL injection detection script
+
+    nmap -p3306 --script mysql-databases --script-args
+    mysqluser=user,mysqlpass=password <host>                                         Database accesses
+
+    nmap -sV --script smtp-open-relay -v <host>                                      Not secure mail servers
+
+    nmap -n -Pn -p 80 --open -sV -v --script http-method-tamper <host>               Looking for Access Control
+                                                                                     settings Vulnerabilities
+
+    nmap -Pn —script=dns-brute <host>                                                Crawls DNS host names
+
+    nmap --script "vuln,exploit" -vv <host> -sV -O                                   Looks for vulnerabilities
+                                                                                     and exploits available for them
+
+                                           #--- Incorrect security configuration ---#
+A06 nmap -p- -sR -I -O <host>                                                        RPC
+    nmap -sV --script ssl-enum-ciphers -p 443 <host>                                 SSL
+    nmap -Pn -sSV -T4 –F                                                             SSL scan of the postprocessor
+    nmap -p <port> --script http-security-headers <host>                             OWASP Secure Headers Project
+    nmap -p445 --script smb-vuln-ms17-010 <host>                                     SMBv1, $IPC
+    nmap -p445 --script vuln <host>
+    nmap -p 443 --script http-cookie-flags <host>                                    http-cookie
+    nmap -sV --script=http-headers <host>                                            http-headers
+    nmap --script ssh2-enum-algos <host>                                             ssh2-enum-algos
+
+    nmap --ip-options "\x01\x07\x27\x04\x00*36" -P0 -sS -p80 <host                   To determine the network
+                                                                                     route to the target machines
+
+    nmap -D RND:12 <host>                                                            Bypasses the IDS system. False 12 hosts
+    nmap --badsum <host>                                                             With bogus TCP/UDP checksums
+    nmap -sT -Pn --spoof-mac 0 <host>                                                Spoofing our MAC address helps us
+                                                                                     Scan the network even if our real
+                                                                                     MAC address is blocked by the firewall/IDS
+
+                                             #--- Cross-site scripting (XSS) ---#
+
+A07 nmap -p80 --script http-stored-xss.nse <host>                                    http-stored-xss
+    nmap -p80 --script http-xssed.nse <host>                                         http-xssed
+    nmap -p80 --script http-dombased-xss.nse <host>                                  http-dombased-xss
+    nmap --script=http-phpself-xss -p80 <target>
+    nmap -sV --script http-self-xss <target>                                         http-phpself-xss
+    nmap -Pn --script=http-sitemap-generator <host>                                  Site Map Generator. Spaider.
+    nmap -v --script "http-*" <host>                                                 All scripts
+
+                                               #--- Unsafe deserialization ---#
+
+A08 nmap --script=rmi-vuln-classloader -p 1099 <host>                                Java rmiregist class loading
+    nmap -sV --script vuln <host>                                                    Checks for code vulnerabilities
+    nmap -p80 --script http-vuln-cve2015-1635.nse <host>                             (MS15-034)
+    nmap -sV --script http-vuln-cve2015-1635 --script-args uri='/anotheruri/' <host>
+
+    nmap --script=http-vuln-cve2010-0738 --script-args
+    'http-vuln-cve2010-0738.paths={/path1/,/path2/}' <host>                          CVE-2010-0738
+
+    nmap --data 0xAABBCC 200 <host>                                                  Allows you to include binary data
+                                                                                     as payload
+
+                                    #--- Use of components with known vulnerabilities ---#
+
+A09 nmap --script mycustomscripts,safe <host>                                        All scripts in the mycustomscripts
+                                                                                     directory and a safe category.
+    nmap --script http-iis-webdav-vuln -p80,8080 <host>                              IIS 5.1/6.0
+    nmap -sV -p- --script http-shellshock <host>
+
+    nmap -sV -p- --script http-shellshock --script-args
+    uri=/cgi-bin/bin,cmd=ls <host>                                                   http-shellshock
+
+    nmap -p 10000 --script ndmp-fs-info <host>                                       ndmp-fs-info
+
